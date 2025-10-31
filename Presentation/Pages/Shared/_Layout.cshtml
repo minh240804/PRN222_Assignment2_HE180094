@@ -1,0 +1,170 @@
+﻿@using Microsoft.AspNetCore.Http
+@inject Microsoft.AspNetCore.Http.IHttpContextAccessor HttpContextAccessor
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>@ViewData["Title"] - Assignment2</title>
+
+	<link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+	<link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" />
+	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+
+	<!-- SignalR 8.x (duy nhất) -->
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js"></script>
+	@await RenderSectionAsync("Styles", required: false)
+</head>
+
+<body>
+	<header>
+		<nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
+			<div class="container">
+				<a class="navbar-brand" asp-area="" asp-page="/Index">Assignment2</a>
+				<button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse"
+					aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+					<span class="navbar-toggler-icon"></span>
+				</button>
+				<div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
+					<ul class="navbar-nav flex-grow-1">
+						<li class="nav-item">
+							<a class="nav-link text-dark" asp-area="" asp-page="/Index">Home</a>
+						</li>
+
+						@{
+							var name = HttpContextAccessor.HttpContext?.Session.GetString("Name");
+							var role = HttpContextAccessor.HttpContext?.Session.GetInt32("Role");
+						}
+
+						@if (!string.IsNullOrEmpty(name))
+						{
+							if (role == 0)
+							{
+								<li class="nav-item">
+									<a class="nav-link text-dark" asp-area="" asp-page="/Admin/Dashboard">
+										<i class="bi bi-speedometer2"></i> Dashboard
+									</a>
+								</li>
+								<li class="nav-item">
+									<a class="nav-link text-dark" asp-area="" asp-page="/AccountManagement/Index">Accounts</a>
+								</li>
+								<li class="nav-item">
+									<a class="nav-link text-dark" asp-area="" asp-page="/Report/Index">Report</a>
+								</li>
+							}
+							else if (role == 1)
+							{
+								<li class="nav-item">
+									<a class="nav-link text-dark" href="/TagManagement/Index">Tag Management</a>
+								</li>
+								<li class="nav-item">
+									<a class="nav-link text-dark" asp-area="" asp-page="/NewsArticleManagement/Index">News
+										Article Management</a>
+								</li>
+
+								<li class="nav-item">
+									<a class="nav-link text-dark" asp-area="" asp-page="/CategoryManagement/Index">Category Manager</a>
+								</li>
+
+								<li class="nav-item">
+									<a class="nav-link text-dark" asp-area="" asp-page="/NewsArticleManagement/MyArticle">My
+										Articles</a>
+								</li>
+
+
+							}
+							if (role != 0)
+							{
+								<li class="nav-item">
+									<a class="nav-link text-dark" asp-area="" asp-page="/AccountManagement/Profile">@name</a>
+								</li>
+							}
+
+
+							<li class="nav-item">
+								<form id="logoutForm" method="post" asp-page="/AccountManagement/Login"
+									asp-page-handler="Logout" class="form-inline">
+									<button id="logoutBtn" type="submit"
+										class="btn btn-link nav-link text-dark">Logout</button>
+								</form>
+							</li>
+						}
+						else
+						{
+							<li class="nav-item">
+								<a class="nav-link text-dark" asp-area="" asp-page="/AccountManagement/Login">Login</a>
+							</li>
+						}
+					</ul>
+				</div>
+			</div>
+		</nav>
+	</header>
+
+	<div class="container">
+		<main role="main" class="pb-3">
+			@RenderBody()
+		</main>
+	</div>
+
+	<footer class="border-top footer text-muted">
+		<div class="container">
+			&copy; 2025 - Assignment2 - <a asp-area="" asp-page="/Privacy">Privacy</a>
+		</div>
+	</footer>
+
+	<!-- Modal Placeholder -->
+	<div class="modal fade" id="form-modal" tabindex="-1">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				<div class="modal-body"></div>
+			</div>
+		</div>
+	</div>
+
+	<!-- Libs -->
+	<script src="~/lib/jquery/dist/jquery.min.js"></script>
+	<script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+
+	<!-- App scripts -->
+	<script src="~/js/site.js" asp-append-version="true"></script>
+	<script src="~/js/accountNotifications.js" asp-append-version="true"></script>
+
+	<script>
+		window.userRole = @(role ?? -1);
+		window.currentAccountId = @(HttpContextAccessor.HttpContext?.Session.GetInt32("AccountId") ?? -1);
+
+		console.log("[SR] Globals -> role:", window.userRole, "accountId:", window.currentAccountId);
+
+		if (window.currentAccountId >= 0) {
+			console.log("Initializing SignalR for account:", window.currentAccountId);
+			startSignalRConnection(window.currentAccountId);
+			setTimeout(registerRoleAndAccount, 200);
+		} else {
+			console.log("[SR] Not starting SignalR (anonymous or no accountId).");
+		}
+
+		(function wireLogoutInterceptor() {
+			const logoutForm = document.getElementById('logoutForm');
+			const logoutBtn = document.getElementById('logoutBtn');
+			if (!logoutForm || !logoutBtn) {
+				console.log("[SR] Logout form not found.");
+				return;
+			}
+			logoutBtn.addEventListener('click', function (e) {
+				e.preventDefault();
+				(async () => {
+					await unregisterRoleThenStop();
+					logoutForm.submit();
+				})();
+			});
+		})();
+	</script>
+
+	@await RenderSectionAsync("Scripts", required: false)
+</body>
+
+</html>

@@ -1,0 +1,69 @@
+﻿@page "{id?}"
+@model Presentation.Pages.TagManagement.FormModel
+@{
+    Layout = null;
+}
+
+<div class="modal-header">
+    <h5 class="modal-title">@(Model.IsCreate ? "Create" : "Edit") Tag</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+</div>
+
+<form id="tagForm" method="post" asp-page="/TagManagement/Form">
+    <div class="modal-body">
+        <input type="hidden" asp-for="Tag.TagId" />
+
+        <!-- Tag Name -->
+        <div class="mb-3">
+            <label asp-for="Tag.TagName" class="form-label">Tag Name</label>
+            <input asp-for="Tag.TagName" class="form-control" required maxlength="100" />
+            <span asp-validation-for="Tag.TagName" class="text-danger"></span>
+        </div>
+
+        <!-- Note -->
+        <div class="mb-3">
+            <label asp-for="Tag.Note" class="form-label">Note</label>
+            <textarea asp-for="Tag.Note" class="form-control" rows="3" maxlength="255"></textarea>
+            <span asp-validation-for="Tag.Note" class="text-danger"></span>
+        </div>
+    </div>
+
+    <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        <button type="submit" class="btn btn-primary" id="saveBtn">Save</button>
+    </div>
+</form>
+
+@await Html.PartialAsync("_ValidationScriptsPartial")
+
+<script>
+    $(document).ready(function () {
+        $('#tagForm').on('submit', function (e) {
+            e.preventDefault(); 
+
+            $.ajax({
+                url: '@Url.Page("/TagManagement/Form")',
+                type: 'POST',
+                data: $(this).serialize(),
+                    success: function (res) {
+        if (res.success) {
+            const modalEl = document.getElementById('formModal');
+            const modal = bootstrap.Modal.getInstance(modalEl);
+            if (modal) modal.hide(); // ✅ Đóng modal đúng cách
+
+            //toastr.success("Saved successfully!");
+            setTimeout(() => location.reload(), 500);
+        } else {
+            toastr.error("Save failed. Please try again.");
+        }
+    },
+
+            });
+        });
+    });
+</script>
+
+<script>
+    window.currentTagId = "@Model.Tag.TagId";
+</script>
+

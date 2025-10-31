@@ -1,0 +1,268 @@
+﻿@page "{id}"
+@model Presentation.Pages.NewsArticleManagement.DetailsModel
+@{
+    ViewData["Title"] = Model.Article?.NewsTitle ?? "Article Details";
+}
+
+
+@* @{ *@
+@*     var id = RouteData.Values["id"]; *@
+@* } *@
+@* <p>ID: @id</p> *@
+<div class="container mt-4">
+    @if (Model.Article == null)
+    {
+        <div class="alert alert-warning">Article not found.</div>
+    }
+    else
+    {
+        <article class="mb-4">
+            <div class="row">
+                <div class="col-lg-8">
+                    <!-- Article Header -->
+                    <header class="mb-4">
+                        <h1 class="fw-bolder mb-1">@Model.Article.NewsTitle</h1>
+                        
+                        <div class="text-muted fst-italic mb-2">
+                            <i class="bi bi-calendar"></i> Posted on @Model.Article.CreatedDate?.ToString("MMMM dd, yyyy")
+                            @if (Model.Article.CreatedBy != null)
+                            {
+                                <span class="ms-3">
+                                    <i class="bi bi-person"></i> By @Model.Article.CreatedBy.AccountName
+                                </span>
+                            }
+                        </div>
+                        
+                        <!-- Categories and Tags -->
+                        <div class="mb-3">
+                            @if (Model.Article.Category != null)
+                            {
+                                <span class="badge bg-primary me-1">
+                                    <i class="bi bi-folder"></i> @Model.Article.Category.CategoryName
+                                </span>
+                            }
+                            @foreach (var tag in Model.Article.Tags)
+                            {
+                                <span class="badge bg-secondary me-1">
+                                    <i class="bi bi-tag"></i> @tag.TagName
+                                </span>
+                            }
+                        </div>
+                    </header>
+
+                    <!-- Headline -->
+                    @if (!string.IsNullOrEmpty(Model.Article.Headline))
+                    {
+                        <div class="alert alert-info">
+                            <h5 class="mb-0">@Model.Article.Headline</h5>
+                        </div>
+                    }
+
+                    <!-- Article Content -->
+                    <section class="mb-5">
+                        <div class="article-content">
+                            @Html.Raw(Model.Article.NewsContent?.Replace("\n", "<br />"))
+                        </div>
+                    </section>
+
+                    <!-- Source -->
+                    @if (!string.IsNullOrEmpty(Model.Article.NewsSource) && 
+                         Model.Article.NewsSource != "N/A" &&
+                         (Model.Article.NewsSource.StartsWith("http://") || Model.Article.NewsSource.StartsWith("https://")))
+                    {
+                        <div class="mb-4">
+                            <small class="text-muted">
+                                <i class="bi bi-link-45deg"></i> Source: 
+                                <a href="@Model.Article.NewsSource" target="_blank" rel="noopener noreferrer">@Model.Article.NewsSource</a>
+                            </small>
+                        </div>
+                    }
+
+                    <!-- Modified Date -->
+                    @if (Model.Article.ModifiedDate != null && Model.Article.ModifiedDate != Model.Article.CreatedDate)
+                    {
+                        <div class="mb-4">
+                            <small class="text-muted">
+                                <i class="bi bi-clock-history"></i> Last updated on @Model.Article.ModifiedDate?.ToString("MMMM dd, yyyy")
+                                @if (Model.Article.UpdatedBy != null)
+                                {
+                                    <span> by @Model.Article.UpdatedBy.AccountName</span>
+                                }
+                            </small>
+                        </div>
+                    }
+
+                    <!-- Back Button -->
+                    <div class="mb-4">
+                        <a asp-page="/Index" class="btn btn-outline-primary">
+                            <i class="bi bi-arrow-left"></i> Back to Articles
+                        </a>
+                    </div>
+
+                    <!-- Comments Section -->
+                    <section class="mb-5">
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <h5 class="card-title mb-3">
+                                    <i class="bi bi-chat-dots"></i> Comments
+                                </h5>
+                                
+                                @if (Model.IsLoggedIn && !Model.IsAdmin)
+                                {
+                                    <!-- Comment Form for Staff and Lecturer only -->
+                                    <div class="mb-3">
+                                        <div class="alert alert-success mb-2">
+                                            <i class="bi bi-person-check"></i> Commenting as <strong>@Model.CurrentUserName</strong>
+                                        </div>
+                                        <form id="commentForm">
+                                            @Html.AntiForgeryToken()
+                                            <div class="input-group">
+                                                <input type="text" id="commentMessage" name="message" class="form-control" 
+                                                       placeholder="Write a comment... (supports **bold**, *italic*, `code`, @@mentions, emojis 😊)" required />
+                                                <button class="btn btn-primary" type="submit" id="sendCommentBtn">
+                                                    <i class="bi bi-send"></i> Send
+                                                </button>
+                                            </div>
+                                            <small class="text-muted d-block mt-1">
+                                                💡 Tip: Use **bold**, *italic*, `code`, @@username for mentions, and emojis!
+                                            </small>
+                                        </form>
+                                    </div>
+                                }
+                                else if (Model.IsAdmin)
+                                {
+                                    <!-- Admin Notice -->
+                                    <div class="alert alert-info mb-3">
+                                        <i class="bi bi-shield-check"></i> 
+                                        <strong>Admin Viewing Mode</strong>
+                                        <p class="mb-0 mt-2">
+                                            You can moderate comments but cannot post new ones.
+                                        </p>
+                                    </div>
+                                    @Html.AntiForgeryToken()
+                                }
+                                else
+                                {
+                                    <!-- Login Prompt -->
+                                    <div class="alert alert-warning mb-3">
+                                        <i class="bi bi-lock"></i> 
+                                        <strong>Please log in to comment</strong>
+                                        <p class="mb-0 mt-2">
+                                            You must be logged in to post comments. 
+                                            <a asp-page="/AccountManagement/Login" class="alert-link">
+                                                Click here to log in
+                                            </a>
+                                        </p>
+                                    </div>
+                                }
+
+                                <!-- Comments List -->
+                                <hr class="my-3" />
+                                <div id="commentsList">
+                                    @if (Model.Comments.Any())
+                                    {
+                                        @foreach (var comment in Model.Comments)
+                                        {
+                                            <div class="mb-3 p-3 bg-white rounded shadow-sm" id="comment-@comment.CommentId">
+                                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                                    <strong class="text-primary">
+                                                        <i class="bi bi-person-circle"></i> @comment.Account.AccountName
+                                                    </strong>
+                                                    <div>
+                                                        <small class="text-muted me-2">
+                                                            <i class="bi bi-clock"></i> @comment.CreatedAt.ToString("HH:mm:ss dd/MM/yyyy")
+                                                        </small>
+                                                        @if (Model.IsAdmin)
+                                                        {
+                                                            <button class="btn btn-sm btn-outline-danger delete-comment-btn" 
+                                                                    data-comment-id="@comment.CommentId"
+                                                                    title="Delete inappropriate comment">
+                                                                <i class="bi bi-trash"></i>
+                                                            </button>
+                                                        }
+                                                    </div>
+                                                </div>
+                                                <div class="comment-text">@comment.Content</div>
+                                            </div>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <div class="text-muted text-center py-3">
+                                            <i class="bi bi-chat-square-text"></i> 
+                                            <p class="mb-0">No comments yet. Be the first to comment!</p>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- Sidebar -->
+                <div class="col-lg-4">
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5 class="mb-0">
+                                <i class="bi bi-bookmark"></i> Related Articles
+                            </h5>
+                        </div>
+                        <div class="list-group list-group-flush">
+                            @if (Model.RelatedArticles.Any())
+                            {
+                                @foreach (var related in Model.RelatedArticles)
+                                {
+                                    <a asp-page="/NewsArticleManagement/Details" asp-route-id="@related.NewsArticleId"
+                                       class="list-group-item list-group-item-action">
+                                        <h6 class="mb-1">@related.NewsTitle</h6>
+                                        <small class="text-muted">
+                                            <i class="bi bi-calendar"></i> @related.CreatedDate?.ToString("MMM dd, yyyy")
+                                        </small>
+                                    </a>
+                                }
+                            }
+                            else
+                            {
+                                <div class="list-group-item text-muted">
+                                    No related articles found.
+                                </div>
+                            }
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">
+                                <i class="bi bi-info-circle"></i> About
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <p class="small">
+                                This article was published by our news team. 
+                                For more information, please contact us.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </article>
+    }
+</div>
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/comment-system.css" asp-append-version="true" />
+}
+
+@section Scripts {
+    <script src="~/js/comment-system.js" asp-append-version="true"></script>
+    <script>
+         window.currentArticleId = '@(Model.Article?.NewsArticleId?.ToString() ?? "")';
+        // Initialize comment system with configuration
+        window.initCommentSystem({
+            articleId: '@Model.Article?.NewsArticleId',
+            currentUser: '@Model.CurrentUserName',
+            isLoggedIn: @Model.IsLoggedIn.ToString().ToLower(),
+            isAdmin: @Model.IsAdmin.ToString().ToLower()
+        });
+    </script>
+}

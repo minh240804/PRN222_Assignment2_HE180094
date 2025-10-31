@@ -1,0 +1,153 @@
+﻿@page
+@model Presentation.Pages.NewsArticleManagement.MyArticleModel
+@{
+    ViewData["Title"] = "My Articles";
+}
+
+<h1>My Articles</h1>
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success">@TempData["SuccessMessage"]</div>
+}
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger">@TempData["ErrorMessage"]</div>
+}
+
+<form method="get" class="row g-2 align-items-end mb-3">
+    <div class="col-md-6">
+        <label class="form-label">Search by title</label>
+        <input type="text" class="form-control" name="Search" value="@Model.Search" placeholder="Enter title..." />
+    </div>
+    <div class="col-md-4">
+        <label class="form-label">Status</label>
+        <select class="form-select" name="StatusFilter">
+            <option value="">All</option>
+            <option value="published" selected="@(Model.StatusFilter == "published")">Published</option>
+            <option value="draft" selected="@(Model.StatusFilter == "draft")">Draft</option>
+        </select>
+    </div>
+    <div class="col-md-2 d-flex gap-2">
+        <button type="submit" class="btn btn-outline-secondary w-100">Apply</button>
+        <a asp-page="./MyArticle" class="btn btn-outline-dark">Reset</a>
+    </div>
+</form>
+
+<div class="mb-3">
+    <a href="javascript:void(0)" class="btn btn-primary" onclick="showCreateForm()">Create New</a>
+</div>
+
+<div class="table-responsive">
+    <table class="table table-bordered table-striped" id="myArticlesTable">
+        <thead>
+            <tr>
+                <th>Title</th>
+                <th>Category</th>
+                <th>Tags</th>
+                <th>Status</th>
+                <th style="width:210px;">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var a in Model.Articles)
+            {
+                <tr>
+                    <td>
+                        <a asp-page="/NewsArticleManagement/Details" asp-route-id="@a.NewsArticleId">
+                            @a.NewsTitle
+                        </a>
+                    </td>
+                    <td>@a.Category?.CategoryName</td>
+                    <td>@string.Join(", ", a.Tags.Select(t => t.TagName))</td>
+                    <td>@(a.NewsStatus ? "Published" : "Draft")</td>
+                    <td>
+                        <div class="btn-group">
+                            <a href="javascript:void(0)" class="btn btn-sm btn-primary"
+                               onclick="showEditForm(@a.NewsArticleId)">Edit</a>
+
+                            <form method="post" asp-page-handler="Delete" asp-route-id="@a.NewsArticleId"
+                                  onsubmit="return confirm('Delete this article?');" class="ms-2">
+                                <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                            </form>
+
+                            @* <a asp-page="/NewsArticleManagement/Details" asp-route-id="@a.NewsArticleId" *@
+                            @*    class="btn btn-sm btn-outline-secondary ms-2">View</a> *@
+                        </div>
+                    </td>
+                </tr>
+            }
+            @if (!Model.Articles.Any())
+            {
+                <tr>
+                    <td colspan="5" class="text-center text-muted py-4">No articles found.</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+<!-- Modal host -->
+<div id="formModal" class="modal fade" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content"><!-- content will be loaded here --></div>
+    </div>
+</div>
+
+@section Scripts {
+    @await Html.PartialAsync("_ValidationScriptsPartial")
+    <script>
+        // để SignalR ở trang list có thể biết để reload
+        window.isNewsList = true;
+
+        function showCreateForm() {
+            $('#formModal .modal-content').load('/NewsArticleManagement/Form?IsModal=true', function () {
+                $('#formModal').modal('show');
+                reparseValidator();
+            });
+        }
+
+        function showEditForm(id) {
+            $('#formModal .modal-content').load('/NewsArticleManagement/Form/' + id + '?IsModal=true', function () {
+                $('#formModal').modal('show');
+                reparseValidator();
+            });
+        }
+
+        // Bắt submit form trong modal bằng AJAX (giữ modal khi lỗi)
+        $(document).on('submit', '#formModal form[data-modal="true"]', function (e) {
+            e.preventDefault();
+            const $form = $(this);
+            if (!$form.valid()) return;
+
+            $.ajax({
+                url: $form.attr('action'),
+                type: 'POST',
+                data: $form.serialize(),
+                success: function (res, _s, xhr) {
+                    const ct = (xhr.getResponseHeader('Content-Type') || '').toLowerCase();
+
+                    if (ct.includes('application/json') && res && res.success) {
+                        $('#formModal').modal('hide');
+                        location.reload();
+                        return;
+                    }
+                    $('#formModal .modal-content').html(res);
+                    reparseValidator();
+                    $('#formModal form').validate().form(); // ép hiện lỗi ngay
+                },
+                error: function (xhr) {
+                    $('#formModal .modal-content').html(xhr.responseText || '<div class="p-3 text-danger">Unexpected error.</div>');
+                    reparseValidator();
+                }
+            });
+        });
+
+        function reparseValidator() {
+            const $f = $('#formModal form');
+            if (!$f.length) return;
+            $f.removeData('validator').removeData('unobtrusiveValidation');
+            $.validator.unobtrusive.parse($f);
+        }
+    </script>
+}

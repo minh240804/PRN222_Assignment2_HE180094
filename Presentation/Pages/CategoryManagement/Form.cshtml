@@ -1,0 +1,74 @@
+﻿@page "{id:int?}"
+@model Presentation.Pages.CategoryManagement.FormModel
+@{
+	Layout = null;
+}
+
+
+<div class="modal-header">
+    <h5 class="modal-title">@(Model.IsCreate ? "Create" : "Edit") Category</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+</div>
+
+<form method="post" asp-page="/CategoryManagement/Form"
+      data-ajax="true" id="categoryModal" novalidate>
+    @Html.AntiForgeryToken()
+    <div class="modal-body">
+        @if (!Model.IsCreate)
+        {
+            <input type="hidden" asp-for="Category.CategoryId"/>
+        }
+
+        <input type="hidden" name="IsModal" value="true" />
+
+        <div class="mb-3">
+            <div asp-validation-summary="All" class="text-danger"></div>
+        </div>
+
+        <div class="form-group mb-3">
+            <label asp-for="Category.CategoryName" class="form-label"></label>
+            <input asp-for="Category.CategoryName" class="form-control" required />
+            <span asp-validation-for="Category.CategoryName" class="text-danger"></span>
+        </div>
+
+        <div class="form-group  mb-3">
+            <label asp-for="Category.CategoryDesciption" class="form-label"></label>
+            <textarea asp-for="Category.CategoryDesciption" rows="3" class="form-control"></textarea>
+        </div>
+
+        <div class="form-group  mb-3">
+            <label asp-for="Category.ParentCategoryId" class="form-label"></label>
+            <select asp-for="Category.ParentCategoryId"
+                    asp-items="Model.ParentCategories"
+                    class="form-control">
+                <option value="">-- None --</option>
+            </select>
+            <span asp-validation-for="Category.ParentCategoryId" class="text-danger"></span>
+        </div>
+
+        <div class="form-group mb-3">
+            <input type="checkbox" class="form-check-input"
+                   id="Category_IsActive"
+                   name="Category.IsActive"
+                   value="true"
+                   @(Model.Category.IsActive == true ? "checked" : "") />
+
+            <label class="form-check-label" for="Category_IsActive">Active</label>
+
+            <input type="hidden" name="Category.IsActive" value="false" />
+        </div>
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        <button type="submit" class="btn btn-primary">
+            @(Model.IsCreate ? "Create" : "Save changes")
+        </button>
+    </div>
+</form>
+
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

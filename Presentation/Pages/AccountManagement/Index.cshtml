@@ -1,0 +1,166 @@
+﻿@page
+@model Presentation.Pages.AccountManagement.IndexModel
+
+<h1>Account Management</h1>
+
+<div class="row mb-3">
+    <div class="col">
+        <form method="get">
+            <div class="input-group">
+                <input type="text" class="form-control" placeholder="Search by name or email" 
+                       name="Search" value="@Model.Search">
+                <select class="form-control" name="RoleFilter">
+                    <option value="">All Roles</option>
+                    <option value="1" selected="@(Model.RoleFilter == 1)">Staff</option>
+                    <option value="2" selected="@(Model.RoleFilter == 2)">Lecturer</option>
+                </select>
+                <button class="btn btn-outline-secondary" type="submit">Search</button>
+            </div>
+        </form>
+    </div>
+    <div class="col-auto">
+        <a href="javascript:void(0)" class="btn btn-primary" onclick="showCreateForm()">Create New</a>
+    </div>
+</div>
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success">@TempData["SuccessMessage"]</div>
+}
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger">@TempData["ErrorMessage"]</div>
+}
+
+<div class="table-responsive">
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Role</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var account in Model.Accounts)
+            {
+                <tr>
+                    <td>@account.AccountId</td>
+                    <td>@account.AccountName</td>
+                    <td>@account.AccountEmail</td>
+                    <td>@(account.AccountRole == 1 ? "Staff" : "Lecturer")</td>
+                    <td>
+                        <a href="javascript:void(0)" class="btn btn-sm btn-primary" 
+                           onclick="showEditForm(@account.AccountId)">Edit</a>
+                        <form method="post" style="display: inline;">
+                            <input type="hidden" name="id" value="@account.AccountId" />
+                            <button type="submit" class="btn btn-sm btn-danger" 
+                                    onclick="return confirm('Are you sure you want to delete this account?')"
+                                    asp-page-handler="Delete">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@{
+    var prevDisabled = Model.CurrentPage == 1 ? "disabled" : "";
+    var nextDisabled = Model.CurrentPage == Model.TotalPages ? "disabled" : "";
+}
+
+<nav>
+    <ul class="pagination">
+        <li class="page-item @prevDisabled">
+            <a class="page-link" asp-page="./Index" 
+               asp-route-currentPage="@(Model.CurrentPage - 1)"
+               asp-route-search="@Model.Search"
+               asp-route-roleFilter="@Model.RoleFilter">Previous</a>
+        </li>
+        @for (var i = 1; i <= Model.TotalPages; i++)
+        {
+            <li class="page-item @(i == Model.CurrentPage ? "active" : "")">
+                <a class="page-link" asp-page="./Index" 
+                   asp-route-currentPage="@i"
+                   asp-route-search="@Model.Search"
+                   asp-route-roleFilter="@Model.RoleFilter">@i</a>
+            </li>
+        }
+        <li class="page-item @nextDisabled">
+            <a class="page-link" asp-page="./Index" 
+               asp-route-currentPage="@(Model.CurrentPage + 1)"
+               asp-route-search="@Model.Search"
+               asp-route-roleFilter="@Model.RoleFilter">Next</a>
+        </li>
+    </ul>
+</nav>
+
+<div id="formModal" class="modal fade" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <!-- Form content will be loaded here -->
+        </div>
+    </div>
+</div>
+
+<script>window.isAccountsList = true;</script>
+
+@section Scripts {
+
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+    <script>
+
+        function showCreateForm() {
+          $('#formModal .modal-content').load('/AccountManagement/Form?IsModal=true', function () {
+            $('#formModal').modal('show');
+            $.validator.unobtrusive.parse('#formModal'); // kích hoạt lại validate
+          });
+        }
+
+        function showEditForm(id) {
+          $('#formModal .modal-content').load('/AccountManagement/Form/' + id + '?IsModal=true', function () {
+            $('#formModal').modal('show');
+            $.validator.unobtrusive.parse('#formModal');
+          });
+        }
+
+        // 🔴 BẮT SUBMIT FORM TRONG MODAL BẰNG AJAX
+        $(document).on('submit', '#formModal form[data-modal="true"]', function (e) {
+          e.preventDefault();
+          const $form = $(this);
+
+          // client-side validate
+          if (!$form.valid()) return;
+
+          $.ajax({
+            url: $form.attr('action'),
+            type: 'POST',
+            data: $form.serialize(), // chứa AntiForgery + IsModal=true
+            success: function (res, status, xhr) {
+              // Nếu server trả JSON { success: true } => đóng modal + refresh list
+              const ct = xhr.getResponseHeader('Content-Type') || '';
+              if (ct.includes('application/json') && res && res.success) {
+                $('#formModal').modal('hide');
+                // TODO: refresh bảng (load lại trang hoặc reload partial)
+                location.reload(); // tạm thời reload trang
+                return;
+              }
+              // Nếu server trả lại HTML (ModelState invalid) => render lại vào modal
+              $('#formModal .modal-content').html(res);
+              $.validator.unobtrusive.parse('#formModal');
+            },
+            error: function (xhr) {
+              $('#formModal .modal-content').html(xhr.responseText || '<div class="p-3 text-danger">Unexpected error.</div>');
+              $.validator.unobtrusive.parse('#formModal');
+            }
+          });
+        });
+
+
+    </script>
+}

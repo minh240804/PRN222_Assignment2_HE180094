@@ -1,0 +1,138 @@
+﻿@page "{id:int?}"
+@model Presentation.Pages.NewsArticleManagement.FormModel
+@{
+    Layout = null;
+}
+
+<div class="modal-header">
+    <h5 class="modal-title">@(Model.IsCreate ? "Create" : "Edit") News Article</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+</div>
+
+
+
+<form method="post" asp-page="/NewsArticleManagement/Form">
+    <div class="modal-body">
+        <input type="hidden" asp-for="Article.NewsArticleId" />
+        <input type="hidden" asp-for="Article.CreatedById" value="@Model.CurrentUserId" required/>
+
+        <!-- Title -->
+        <div class="mb-3">
+            <label asp-for="Article.NewsTitle" class="form-label">Title</label>
+            <input asp-for="Article.NewsTitle" class="form-control" required />
+            <span asp-validation-for="Article.NewsTitle" class="text-danger"></span>
+        </div>
+
+        <!-- Headline -->
+        <div class="mb-3">
+            <label asp-for="Article.Headline" class="form-label">Headline</label>
+            <input asp-for="Article.Headline" class="form-control" required />
+            <span asp-validation-for="Article.Headline" class="text-danger"></span>
+        </div>
+
+        <!-- Content -->
+        <div class="mb-3">
+            <label asp-for="Article.NewsContent" class="form-label">Content</label>
+            <textarea asp-for="Article.NewsContent" class="form-control" rows="5"></textarea>
+            <span asp-validation-for="Article.NewsContent" class="text-danger"></span>
+        </div>
+
+        <!-- Category -->
+        <div class="mb-3">
+            <label asp-for="Article.CategoryId" class="form-label">Category</label>
+            <select asp-for="Article.CategoryId" class="form-select"
+                    asp-items="@(new SelectList(Model.Categories, "CategoryId", "CategoryName"))">
+                <option value="">-- Select Category --</option>
+            </select>
+            <span asp-validation-for="Article.CategoryId" class="text-danger"></span>
+        </div>
+
+        <!-- Tags -->
+        <div class="mb-3">
+            <label class="form-label">Tags</label>
+            <div id="tagContainer" class="border rounded p-2" style="max-height: 180px; overflow-y: auto;">
+                @foreach (var tag in Model.Tags)
+                {
+                    var isChecked = Model.SelectedTags.Contains(tag.TagId);
+                    <div class="form-check">
+                        <input class="form-check-input"
+                               type="checkbox"
+                               name="SelectedTags"
+                               value="@tag.TagId"
+                               id="tag_@tag.TagId"
+                        @(isChecked ? "checked" : "") />
+                        <label class="form-check-label" for="tag_@tag.TagId">@tag.TagName</label>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Published -->
+        <div class="mb-3">
+            <div class="form-check form-switch">
+                <input asp-for="Article.NewsStatus" class="form-check-input" id="publishedSwitch" />
+                <label class="form-check-label" for="publishedSwitch">Published</label>
+            </div>
+            <span asp-validation-for="Article.NewsStatus" class="text-danger"></span>
+        </div>
+
+    </div>
+
+    <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        <button type="submit" class="btn btn-primary" id="saveBtn">Save</button>
+    </div>
+</form>
+
+
+@section Scripts {
+    @await Html.PartialAsync("_ValidationScriptsPartial")
+
+    
+    <script>
+        window.isNewArticleForm = true;
+        window.currentArticleId = "@Model.Article.NewsArticleId";
+    </script>
+
+}
+<script>
+    window.currentArticleId = "@Model.Article.NewsArticleId";
+    window.isNewArticleForm = true;
+
+    // Lắng nghe TagCreated (từ SignalR connection được khởi tạo ở trang cha)
+    const tagListElement = document.querySelector('#tagContainer');
+
+    if (window.connection && tagListElement) {
+        window.connection.on("TagCreated", function (tagId, tagName, tagNote) {
+            console.log(tagId, tagName, tagNote)
+            // Tránh trùng
+            if (document.querySelector(`#tag_${tagId}`)) return;
+
+            const wrapper = document.createElement("div");
+            wrapper.classList.add("form-check");
+            wrapper.innerHTML = `
+                <input class="form-check-input" type="checkbox" name="SelectedTags" value="${tagId}" id="tag_${tagId}" />
+                <label class="form-check-label" for="tag_${tagId}">${tagName}</label>
+            `;
+
+            tagListElement.appendChild(wrapper);
+            toastr.success(`Tag mới "${tagName}" đã được thêm.`);
+        });
+    }
+    window.connection.on("TagUpdated", function (tagId, newName, newNote) {
+        const label = document.querySelector(`#tag_${tagId} + label`);
+        if (label) {
+            label.textContent = newName;
+            toastr.info(`Tag "${newName}" đã được cập nhật.`);
+        }
+    });
+
+    // --- Khi xóa Tag ---
+    window.connection.on("TagDeleted", function (tagId, TagName) {
+        const tagItem = document.querySelector(`#tag_${tagId}`);
+        if (tagItem) {
+            tagItem.closest(".form-check").remove();
+            toastr.warning(`Tag đã bị xóa.`);
+        }
+    });
+</script>

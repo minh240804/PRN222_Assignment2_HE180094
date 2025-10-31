@@ -1,0 +1,44 @@
+/* Comment System Styles */
+.comment-text {
+    word-wrap: break-word;
+    line-height: 1.6;
+}
+
+.comment-text code {
+    background: #f8f9fa;
+    color: #d63384;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.9em;
+}
+
+.comment-text strong {
+    font-weight: 700;
+}
+
+.comment-text em {
+    font-style: italic;
+}
+
+.comment-text a {
+    color: #0d6efd;
+    text-decoration: none;
+}
+
+.comment-text a:hover {
+    text-decoration: underline;
+}
+
+.mention {
+    color: #0d6efd;
+    font-weight: 600;
+    background: #e7f3ff;
+    padding: 2px 4px;
+    border-radius: 3px;
+    cursor: pointer;
+}
+
+.mention:hover {
+    background: #cce5ff;
+}

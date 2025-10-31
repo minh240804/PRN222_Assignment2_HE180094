@@ -1,0 +1,138 @@
+﻿@page
+@model Presentation.Pages.NewsArticleManagement.IndexModel
+@{
+    ViewData["Title"] = "News Articles";
+}
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success">@TempData["SuccessMessage"]</div>
+}
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger">@TempData["ErrorMessage"]</div>
+}
+
+<!-- Search + Filters -->
+<form method="get" class="row g-2 align-items-end mb-3">
+    <div class="col-md-4">
+        <label class="form-label">Search by title</label>
+        <input type="text" class="form-control" name="Search" value="@Model.Search" placeholder="Enter title..." />
+    </div>
+
+    <div class="col-md-3">
+        <label class="form-label">Tag</label>
+        <select class="form-select" name="TagId">
+            <option value="">All tags</option>
+            @foreach (var t in Model.TagOptions)
+            {
+                <option value="@t.Value" selected="@(t.Value == (Model.TagId?.ToString() ?? ""))">@t.Text</option>
+            }
+        </select>
+    </div>
+
+    <div class="col-md-3">
+        <label class="form-label">Status</label>
+        <select class="form-select" name="StatusFilter">
+            <option value="">All</option>
+            <option value="published" selected="@(Model.StatusFilter == "published")">Published</option>
+            <option value="draft" selected="@(Model.StatusFilter == "draft")">Draft</option>
+        </select>
+    </div>
+
+    <div class="col-md-2 d-flex gap-2">
+        <button type="submit" class="btn btn-outline-secondary w-100">Apply</button>
+        <a asp-page="./Index" class="btn btn-outline-dark">Reset</a>
+    </div>
+</form>
+
+<div class="col-auto mb-3">
+    <a href="javascript:void(0)" class="btn btn-primary" onclick="showCreateForm()">Create New</a>
+</div>
+
+<table class="table table-bordered table-striped">
+    <thead>
+        <tr>
+            <th>Title</th>
+            <th>Author</th>
+            <th>Category</th>
+            <th>Tags</th>
+            <th>Status</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var article in Model.Articles)
+        {
+            <tr>
+                <td>
+                    <a asp-page="/NewsArticleManagement/Details" asp-route-id="@article.NewsArticleId">
+                        @article.NewsTitle
+                    </a>
+                </td>
+                <td>@article.CreatedBy?.AccountName</td>
+                <td>@article.Category?.CategoryName</td>
+                <td>@string.Join(", ", article.Tags.Select(t => t.TagName))</td>
+                <td>@(article.NewsStatus ? "Published" : "Draft")</td>
+                <td>
+                    <div class="btn-group" role="group">
+                        <a href="javascript:void(0)" class="btn btn-sm btn-primary"
+                           onclick="showEditForm(@article.NewsArticleId)">Edit</a>
+
+                        @if (Model.IsStaff)
+                        {
+                            <form method="post" asp-page-handler="Delete" asp-route-id="@article.NewsArticleId"
+                                  onsubmit="return confirm('Are you sure you want to delete this article?');"
+                                  style="display: inline;">
+                                <button type="submit" class="btn btn-sm btn-danger">
+                                    Delete
+                                </button>
+                            </form>
+                        }
+                    </div>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<div id="formModal" class="modal fade" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content"><!-- loaded by AJAX --></div>
+    </div>
+</div>
+
+<script>window.isNewsList = true;</script>
+
+@section Scripts {
+
+    @await Html.PartialAsync("_ValidationScriptsPartial")
+    <script>
+        function showCreateForm() {
+            $('#formModal .modal-content').load('/NewsArticleManagement/Form?IsModal=true', function () {
+                $('#formModal').modal('show');
+            });
+        }
+        function showEditForm(id) {
+            $('#formModal .modal-content').load('/NewsArticleManagement/Form/' + id + '?IsModal=true', function () {
+                $('#formModal').modal('show');
+            });
+        }
+    </script>
+
+    <script>
+        window.connection = new signalR.HubConnectionBuilder()
+            .withUrl("/notificationHub")
+            .build();
+
+        connection.start().then(() => {
+            console.log("[SR] SignalR connected.");
+        }).catch(err => console.error("[SR] SignalR error:", err));
+
+        // Biến flag dùng cho form
+        window.isNewsList = true;
+    </script>
+
+}
+
+

@@ -1,0 +1,224 @@
+@page
+@model Presentation.Pages.Admin.DashboardModel
+@{
+    ViewData["Title"] = "Admin Dashboard";
+}
+
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3">
+                    <i class="bi bi-speedometer2"></i> Admin Dashboard
+                </h1>
+                <div>
+                    <span class="badge bg-success" id="connectionStatus">
+                        <i class="bi bi-wifi"></i> Connected
+                    </span>
+                    <small class="text-muted ms-2">
+                        Last updated: <span id="lastUpdate">Just now</span>
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-primary shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                Total Articles
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800" id="totalArticles">
+                                @Model.Stats.TotalArticles
+                            </div>
+                            <small class="text-muted">
+                                <i class="bi bi-check-circle text-success"></i> Published: <span id="publishedArticles">@Model.Stats.PublishedArticles</span>
+                                <i class="bi bi-file-earmark ms-2"></i> Draft: <span id="draftArticles">@Model.Stats.DraftArticles</span>
+                            </small>
+                        </div>
+                        <div class="col-auto">
+                            <i class="bi bi-newspaper fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-success shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                Total Accounts
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800" id="totalAccounts">
+                                @Model.Stats.TotalAccounts
+                            </div>
+                            <small class="text-muted">
+                                <i class="bi bi-person-check text-success"></i> Active: <span id="activeAccounts">@Model.Stats.ActiveAccounts</span>
+                                <i class="bi bi-person-x ms-2"></i> Inactive: <span id="inactiveAccounts">@Model.Stats.InactiveAccounts</span>
+                            </small>
+                        </div>
+                        <div class="col-auto">
+                            <i class="bi bi-people fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-info shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                Total Categories
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800" id="totalCategories">
+                                @Model.Stats.TotalCategories
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="bi bi-folder fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-warning shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                Total Comments
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800" id="totalComments">
+                                @Model.Stats.TotalComments
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="bi bi-chat-dots fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chart Section -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="bi bi-bar-chart"></i> Statistics Overview
+                    </h6>
+                    <div class="btn-group" role="group">
+                        <button type="button" class="btn btn-sm btn-outline-primary active" data-chart-type="bar">
+                            <i class="bi bi-bar-chart"></i> Bar
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-primary" data-chart-type="pie">
+                            <i class="bi bi-pie-chart"></i> Pie
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-primary" data-chart-type="line">
+                            <i class="bi bi-graph-up"></i> Line
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container" style="position: relative; height:400px;">
+                        <canvas id="statsChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="bi bi-clock-history"></i> Recent Activity
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div id="activityLog" class="list-group">
+                        <div class="list-group-item text-muted text-center">
+                            Waiting for real-time updates...
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Styles {
+    <style>
+        .border-left-primary {
+            border-left: 0.25rem solid #4e73df!important;
+        }
+        .border-left-success {
+            border-left: 0.25rem solid #1cc88a!important;
+        }
+        .border-left-info {
+            border-left: 0.25rem solid #36b9cc!important;
+        }
+        .border-left-warning {
+            border-left: 0.25rem solid #f6c23e!important;
+        }
+        .text-gray-300 {
+            color: #dddfeb!important;
+        }
+        .text-gray-800 {
+            color: #5a5c69!important;
+        }
+        .fa-2x {
+            font-size: 2em;
+        }
+        
+        @@keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .stat-update {
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        
+        #connectionStatus.disconnected {
+            background-color: #dc3545 !important;
+        }
+    </style>
+}
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="~/js/admin-dashboard.js" asp-append-version="true"></script>
+    <script>
+        // Initialize dashboard with current stats
+        window.initDashboard({
+            initialStats: {
+                totalArticles: @Model.Stats.TotalArticles,
+                totalAccounts: @Model.Stats.TotalAccounts,
+                totalCategories: @Model.Stats.TotalCategories,
+                totalComments: @Model.Stats.TotalComments,
+                publishedArticles: @Model.Stats.PublishedArticles,
+                draftArticles: @Model.Stats.DraftArticles,
+                activeAccounts: @Model.Stats.ActiveAccounts,
+                inactiveAccounts: @Model.Stats.InactiveAccounts
+            }
+        });
+    </script>
+}
